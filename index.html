@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f8f0dc">
+<meta name="robots" content="noindex, nofollow">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Menu</title>
+<style>
+  :root {
+    --bar-h: 56px; --top-h: 54px; --btn: 44px; --top-btn: 40px; --gap: 12px;
+    --bar-bg: rgba(255,250,236,.88); --fg: #3a2f1c; --accent: #f26b21; --tint: rgba(58,47,28,.1); --tint-strong: rgba(58,47,28,.2);
+    --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; height: 100dvh; overflow: hidden; overscroll-behavior: none;
+    background: #f8f0dc;
+    color: var(--fg); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  #stage {
+    position: absolute; left: var(--sal); right: var(--sar); top: calc(var(--sat) + var(--top-h));
+    bottom: calc(var(--bar-h) + var(--sab) + var(--gap) * 1.5);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #host { display: flex; align-items: center; justify-content: center; touch-action: none; }
+  #book { box-shadow: 0 10px 30px rgba(60,40,10,.3); }
+  .page { background: #fff; overflow: hidden; }
+  .page img { width: 100%; height: 100%; display: block; -webkit-user-drag: none; pointer-events: none; }
+
+  /* Thanh điều khiển */
+  #bar {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    bottom: calc(var(--sab) + var(--gap)); z-index: 5;
+    width: min(calc(100% - 2 * var(--gap) - var(--sal) - var(--sar)), 420px); height: var(--bar-h);
+    display: flex; align-items: center; justify-content: space-between; padding: 0 6px;
+    background: var(--bar-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+    border-radius: 999px; box-shadow: 0 6px 20px rgba(90,60,10,.22);
+  }
+  .btn {
+    width: var(--btn); height: var(--btn); border: 0; padding: 0; border-radius: 50%;
+    background: transparent; color: var(--fg); display: grid; place-items: center; cursor: pointer;
+  }
+  .btn svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn:active:not(:disabled) { background: var(--tint-strong); }
+  .btn:disabled { opacity: .3; cursor: default; }
+  /* Thanh trên: [mục lục]   [phóng to · toàn màn hình] */
+  #top {
+    position: absolute; left: 0; right: 0; top: 0; z-index: 5; height: calc(var(--sat) + var(--top-h));
+    padding: var(--sat) calc(var(--sar) + var(--gap)) 0 calc(var(--sal) + var(--gap));
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  #top .grp { display: flex; gap: 8px; }
+  #top .btn { width: var(--top-btn); height: var(--top-btn); background: var(--bar-bg); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 3px 10px rgba(90,60,10,.18); }
+  #top .btn svg { width: 20px; height: 20px; }
+  #top .btn[hidden] { display: none; }
+  /* Thanh tiến độ (có thể chạm/kéo để chuyển trang) */
+  #progress { position: relative; flex: 1; height: var(--btn); margin: 0 4px; cursor: pointer; touch-action: none; outline: none; }
+  #pTrack { position: absolute; left: 26px; right: 26px; top: 50%; height: 6px; margin-top: -3px; border-radius: 3px; background: var(--tint-strong); }
+  #pFill { position: absolute; left: 0; top: 0; bottom: 0; width: calc(var(--p, 0) * 100%); border-radius: 3px; background: var(--accent); transition: width .25s ease; }
+  #pThumb {
+    position: absolute; top: 50%; left: calc(var(--p, 0) * 100%); transform: translate(-50%, -50%);
+    min-width: 28px; height: 24px; padding: 0 7px; display: grid; place-items: center; border-radius: 12px;
+    background: var(--accent); color: #fff; box-shadow: 0 2px 8px rgba(60,40,10,.4);
+    font-size: 11px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap;
+    transition: left .25s ease, transform .15s;
+  }
+  #progress.drag #pFill, #progress.drag #pThumb { transition: transform .15s; }
+  #progress.drag #pThumb { transform: translate(-50%, -50%) scale(1.15); }
+  #progress:focus-visible #pThumb { outline: 2px solid var(--fg); outline-offset: 2px; }
+
+  @media (hover: hover) { .btn:hover:not(:disabled) { background: var(--tint); } }
+
+  /* Màn hình ngang thấp (điện thoại xoay ngang) */
+  @media (max-height: 500px) {
+    :root { --bar-h: 46px; --top-h: 46px; --btn: 38px; --top-btn: 34px; --gap: 6px; }
+    .btn svg { width: 20px; height: 20px; }
+    #pThumb { height: 22px; font-size: 10.5px; }
+  }
+
+  /* Gợi ý lần đầu */
+  #hint {
+    position: absolute; left: 50%; top: calc(var(--sat) + var(--top-h) + 6px); transform: translateX(-50%);
+    padding: 8px 16px; border-radius: 999px; background: var(--bar-bg); font-size: 14px;
+    white-space: nowrap; opacity: 0; pointer-events: none; transition: opacity .4s; z-index: 6;
+  }
+  #hint.show { opacity: 1; }
+
+  /* Lớp phủ dùng chung */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10; display: none; background: #f8f0dc; color: var(--fg);
+  }
+  .overlay.open { display: block; }
+  .ov-head {
+    position: fixed; left: 0; right: 0; top: 0; z-index: 2; display: flex; align-items: center; gap: 4px;
+    padding: calc(var(--sat) + 6px) calc(var(--sar) + 8px) 6px calc(var(--sal) + 8px);
+    background: linear-gradient(rgba(248,240,220,.95), rgba(248,240,220,0));
+  }
+  .ov-head .title { flex: 1; font-size: 15px; font-weight: 600; padding-left: 6px; }
+  .ov-head .btn { background: var(--bar-bg); box-shadow: 0 2px 10px rgba(90,60,10,.2); }
+
+  /* Chế độ đọc (phóng to) */
+  #reader { overflow: auto; -webkit-overflow-scrolling: touch; touch-action: pan-x pan-y; overscroll-behavior: contain; }
+  #readerImg { display: block; margin: 0 auto; height: auto; max-width: none; -webkit-user-drag: none; box-shadow: 0 6px 24px rgba(90,60,10,.3); }
+  #readerBox { padding: calc(var(--sat) + 56px) 0 calc(var(--sab) + 16px); width: max-content; min-width: 100%; }
+
+  /* Mục lục trang */
+  #thumbs { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  #grid {
+    display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    padding: calc(var(--sat) + 60px) calc(var(--sar) + 14px) calc(var(--sab) + 20px) calc(var(--sal) + 14px);
+    max-width: 900px; margin: 0 auto;
+  }
+  .th { position: relative; border: 2px solid transparent; border-radius: 6px; overflow: hidden; background: #fff; padding: 0; cursor: pointer; box-shadow: 0 3px 10px rgba(90,60,10,.25); aspect-ratio: 1440 / 2086; }
+  .th.cur { border-color: var(--accent); }
+  .th img { width: 100%; height: 100%; display: block; }
+  .th span { position: absolute; right: 4px; bottom: 4px; min-width: 22px; padding: 1px 6px; border-radius: 10px; background: rgba(58,47,28,.82); color: #fff; font-size: 12px; text-align: center; }
+
+  #loading { position: absolute; inset: 0; display: grid; place-items: center; font-size: 15px; color: #3a2f1c; opacity: .8; }
+  @media (prefers-reduced-motion: reduce) { #hint { transition: none; } }
+</style>
+</head>
+<body>
+<div id="loading">Đang tải menu…</div>
+<div id="stage"><div id="host"></div></div>
+<div id="hint">Vuốt ngang để lật trang</div>
+
+<div id="top">
+  <button class="btn" id="btnGrid" aria-label="Xem tất cả các trang"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></button>
+  <div class="grp">
+    <button class="btn" id="btnZoom" aria-label="Phóng to để đọc"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2M11 8v6M8 11h6"/></svg></button>
+    <button class="btn" id="btnFull" aria-label="Toàn màn hình" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+  </div>
+</div>
+
+<div id="bar" role="toolbar" aria-label="Lật trang">
+  <button class="btn" id="btnPrev" aria-label="Trang trước"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+  <div id="progress" role="slider" tabindex="0" aria-label="Tiến độ trang" aria-valuemin="1" aria-valuemax="12" aria-valuenow="1">
+    <div id="pTrack"><div id="pFill"></div><div id="pThumb">1</div></div>
+  </div>
+  <button class="btn" id="btnNext" aria-label="Trang sau"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+</div>
+
+<!-- Chế độ đọc phóng to -->
+<div id="reader" class="overlay" aria-modal="true" role="dialog" aria-label="Phóng to trang">
+  <div class="ov-head">
+    <button class="btn" id="rClose" aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <div class="title" id="rTitle"></div>
+    <button class="btn" id="rPrev" aria-label="Trang trước"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="btn" id="rNext" aria-label="Trang sau"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button>
+    <button class="btn" id="rOut" aria-label="Thu nhỏ"><svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg></button>
+    <button class="btn" id="rIn" aria-label="Phóng to"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+  </div>
+  <div id="readerBox"><img id="readerImg" alt=""></div>
+</div>
+
+<!-- Mục lục trang -->
+<div id="thumbs" class="overlay" aria-modal="true" role="dialog" aria-label="Mục lục trang">
+  <div class="ov-head">
+    <div class="title">Chọn trang</div>
+    <button class="btn" id="tClose" aria-label="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <div id="grid"></div>
+</div>
+
+<script src="lib/page-flip.browser.js"></script>
+<script>
+(function () {
+  const TOTAL = 12, W = 1440, H = 2086, RATIO = W / H;
+  const $ = id => document.getElementById(id);
+  const src = i => 'assets/trang_' + String(i + 1).padStart(2, '0') + '.webp';
+  const stage = $('stage'), host = $('host'), thumb = $('pThumb');
+
+  let pf = null, cur = 0, sig = '', spreadMode = false;
+
+  /* ---------- Cử chỉ lật: dễ cả hai hướng ----------
+     Thư viện gốc quyết định hướng lật theo VỊ TRÍ chạm (ở chế độ 1 trang, phải chạm đúng ~40% bên trái
+     trang mới lật lùi được) và bỏ qua cú vuốt nhanh nếu lệch chéo. Ở đây:
+     1) Chế độ 1 trang: hướng lật theo HƯỚNG KÉO (kéo sang phải = lùi, sang trái = tiến), chạm ở đâu cũng được.
+     2) Cú vuốt/gạt nhanh mà thư viện bỏ sót (vuốt chéo, quãng ngắn) vẫn được tính. */
+  let gesture = null;   // { x, y, dx, dy, active, lib }
+  const inBook = e => host.contains(e.target);
+  addEventListener('pointerdown', e => {
+    if (!inBook(e) || (e.pointerType === 'mouse' && e.button !== 0)) { gesture = null; return; }
+    gesture = { x: e.clientX, y: e.clientY, dx: 0, dy: 0, t: Date.now(), active: true, lib: false };
+  }, true);
+  addEventListener('pointermove', e => {
+    if (gesture && gesture.active) { gesture.dx = e.clientX - gesture.x; gesture.dy = e.clientY - gesture.y; }
+  }, true);
+  const endGesture = e => {
+    const g = gesture;
+    if (!g || !g.active) return;
+    g.active = false;
+    if (e.type !== 'pointerup' || !pf) return;
+    const dx = e.clientX - g.x, dy = e.clientY - g.y;
+    g.dx = dx; g.dy = dy;
+    if (Math.abs(dx) < 28 || Math.abs(dx) < Math.abs(dy) * .8) return;   // không phải cú gạt ngang
+    const idx = pf.getCurrentPageIndex();
+    setTimeout(() => {
+      // Thư viện đã tự xử lý (đang kéo/đang lật) thì thôi, chỉ bù khi nó bỏ sót
+      if (g.lib || !pf || pf.getState() !== 'read' || pf.getCurrentPageIndex() !== idx) return;
+      dx > 0 ? pf.flipPrev() : pf.flipNext();
+    }, 60);
+  };
+  addEventListener('pointerup', endGesture, true);
+  addEventListener('pointercancel', endGesture, true);
+  const hm = location.hash.match(/page\/(\d+)/);
+  if (hm) cur = Math.min(Math.max(+hm[1], 1), TOTAL) - 1;
+
+  /* ---------- Bố cục: chọn 1 trang / 2 trang, tính kích thước ---------- */
+  function layout() {
+    const aw = stage.clientWidth - 16, ah = stage.clientHeight - 16;
+    // Chỉ dùng 2 trang khi màn hình đủ rộng và đủ lớn (máy tính bảng ngang, desktop)
+    const spread = aw / ah > 1.2 && Math.min(aw, ah) >= 500;
+    const w = Math.max(120, Math.floor(Math.min(spread ? aw / 2 : aw, ah * RATIO)));
+    return { w, h: Math.floor(w / RATIO), spread };
+  }
+
+  function build() {
+    const L = layout();
+    const newSig = L.w + 'x' + L.h + (L.spread ? 's' : 'p');
+    if (newSig === sig) return;
+    sig = newSig; spreadMode = L.spread;
+
+    if (pf) {
+      cur = pf.getCurrentPageIndex();
+      try { pf.destroy(); } catch (e) {}
+    }
+    host.innerHTML = '';
+    // #book có kích thước cố định (px); phần tử bên trong là vùng thư viện chiếm 100%
+    const outer = document.createElement('div');
+    outer.id = 'book';
+    outer.style.width = (L.spread ? L.w * 2 : L.w) + 'px';
+    outer.style.height = L.h + 'px';
+    const book = document.createElement('div');
+    book.style.cssText = 'width:100%;height:100%';
+    outer.appendChild(book);
+    host.appendChild(outer);
+
+    const els = [];
+    for (let i = 0; i < TOTAL; i++) {
+      const d = document.createElement('div');
+      d.className = 'page';
+      const img = new Image();
+      img.src = src(i); img.alt = 'Trang ' + (i + 1); img.decoding = 'async';
+      d.appendChild(img); book.appendChild(d); els.push(d);
+    }
+
+    pf = new St.PageFlip(book, {
+      width: L.w, height: L.h, size: 'stretch',
+      minWidth: Math.floor(L.w * .75), maxWidth: L.w * 2,
+      minHeight: Math.floor(L.h * .75), maxHeight: L.h * 2,
+      showCover: true, usePortrait: true, autoSize: true,
+      drawShadow: true, maxShadowOpacity: .45, flippingTime: 700,
+      mobileScrollSupport: false, swipeDistance: 20, startPage: Math.min(cur, TOTAL - 1)
+    });
+    pf.loadFromHTML(els);
+    // Thả tay sau khi kéo. Thư viện gốc chỉ lật khi góc trang bị kéo QUA gáy sách, nghĩa là ở chế độ
+    // 1 trang phải kéo hết bề ngang màn hình. Ở đây: kéo quá ~22% bề ngang trang theo đúng hướng
+    // (hoặc gạt nhanh) là lật. Đồng thời phát tiếng lật (thư viện không báo trạng thái 'flipping' lúc này).
+    const fc = pf.getFlipController();
+    if (fc && typeof fc.stopMove === 'function') {
+      const origStop = fc.stopMove.bind(fc);
+      fc.stopMove = () => {
+        try {
+          const c = fc.calc;
+          if (c) {
+            const r = fc.getBoundsRect(), pos = c.getPosition(), g = gesture;
+            // Chế độ 1 trang: vị trí góc trang không phản ánh quãng kéo nếu bắt đầu kéo giữa trang, nên chỉ xét quãng kéo
+            let turn = pf.getOrientation() === 'portrait' ? false : pos.x <= 0;
+            if (!g) turn = pos.x <= 0;
+            if (!turn && g) {
+              const towards = c.getDirection() === 1 ? g.dx : -g.dx;   // lùi = kéo sang phải, tiến = kéo sang trái
+              const quick = Date.now() - g.t < 300;
+              turn = towards >= (quick ? 20 : r.pageWidth * .22) && Math.abs(g.dx) >= Math.abs(g.dy);
+            }
+            const y = c.getCorner() === 'bottom' ? r.height : 0;
+            if (turn) {
+              playFlip();
+              fc.animateFlippingTo(pos, { x: -r.pageWidth, y }, true);
+            } else {
+              fc.animateFlippingTo(pos, { x: r.pageWidth, y }, false);   // trả trang về chỗ cũ
+            }
+            return;
+          }
+        } catch (e) {}
+        origStop();
+      };
+    }
+    // Lật lùi ở chế độ 1 trang: thư viện cho trang trước "trượt" vào từ ngoài khung hình, không thấy nếp cuộn.
+    // Ở đây dựng lại bằng cách chạy ngược hiệu ứng lật tiến của trang trước: nhảy tới trang trước rồi
+    // tua ngược nếp cuộn từ mép trái trả trang về, nên nhìn giống hệt lật tiến (chỉ đảo chiều thời gian).
+    if (fc && typeof fc.flip === 'function') {
+      const origFlip = fc.flip.bind(fc);
+      fc.flip = pt => {
+        try {
+          if (pf.getOrientation() === 'portrait' && fc.getDirectionByPoint(fc.render.convertToBook(pt)) === 1) {
+            if (pf.getState() !== 'read' && fc.calc) fc.render.finishAnimation();   // bấm liên tiếp: kết thúc lần trước
+            if (pf.getState() === 'read' && pf.getCurrentPageIndex() >= 1 && reverseCurl(fc)) return;
+          }
+        } catch (e) {}
+        origFlip(pt);
+      };
+    }
+    function reverseCurl(fc) {
+      const r = fc.getBoundsRect(), pw = r.pageWidth, H = r.height;
+      const bookEl = host.firstElementChild;
+      bookEl.style.visibility = 'hidden';                 // tránh nháy 1 khung hình lúc đổi trang
+      pf.turnToPage(pf.getCurrentPageIndex() - 1);
+      if (!fc.start({ x: r.left + 2 * pw - 10, y: H - 2 })) { bookEl.style.visibility = ''; update(); return true; }
+      cur = pf.getCurrentPageIndex(); update();
+      fc.setState('flipping');
+      const i = H / 10, s = H - i, x1 = pw - 2;
+      const t0 = (pw - i) / (pw - i + pw), y0 = s + (H - s) * t0;   // điểm ở mép trái trên đường lật tiến
+      const n = Math.max(2, Math.round(x1)), frames = [];
+      for (let k = 0; k <= n; k++) {
+        const u = k / n;
+        frames.push(() => fc.do({ x: x1 * u, y: y0 + (s - y0) * u }));
+      }
+      fc.calc.calc({ x: 0, y: y0 });
+      fc.render.startAnimation(frames, fc.getAnimationDuration(n), () => {
+        if (!fc.calc) return;
+        fc.render.setBottomPage(null); fc.render.setFlippingPage(null); fc.render.clearShadow();
+        fc.setState('read'); fc.reset();
+      });
+      requestAnimationFrame(() => requestAnimationFrame(() => { bookEl.style.visibility = ''; }));
+      return true;
+    }
+    if (fc && typeof fc.getDirectionByPoint === 'function') {
+      const origDir = fc.getDirectionByPoint.bind(fc);   // 0 = tiến, 1 = lùi
+      fc.getDirectionByPoint = pt => {
+        const g = gesture;
+        if (g && g.active && pf.getOrientation() === 'portrait' &&
+            Math.abs(g.dx) >= 6 && Math.abs(g.dx) >= Math.abs(g.dy) * .6) return g.dx > 0 ? 1 : 0;
+        return origDir(pt);
+      };
+    }
+    pf.on('flip', e => { cur = e.data; update(); });
+    pf.on('changeOrientation', update);
+    pf.on('changeState', e => {
+      if (e.data === 'flipping') playFlip();
+      if ((e.data === 'user_fold' || e.data === 'flipping') && gesture) gesture.lib = true;
+    });
+    const l = $('loading'); if (l) l.remove();
+    update();
+  }
+
+  /* ---------- Âm thanh lật trang (file assets/page-flip-01a.mp3) ---------- */
+  const SND_URL = 'assets/page-flip-01a.mp3';
+  let ac = null, sndBuf = null, lastSnd = 0;
+  // Web Audio: độ trễ thấp, cho phép chồng tiếng. Nếu không tải/giải mã được (vd. mở bằng file://) thì dùng <audio>.
+  function audio() {
+    if (!ac) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      ac = new C();
+      fetch(SND_URL).then(r => r.arrayBuffer())
+        .then(ab => new Promise((ok, no) => ac.decodeAudioData(ab, ok, no)))
+        .then(buf => { sndBuf = buf; })
+        .catch(() => { sndBuf = null; });
+    }
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function playFlip() {
+    const nowMs = Date.now();
+    if (nowMs - lastSnd < 200) return;
+    lastSnd = nowMs;
+    const c = audio();
+    if (c && sndBuf) {
+      const src = c.createBufferSource(); src.buffer = sndBuf;
+      const g = c.createGain(); g.gain.value = .9;
+      src.connect(g); g.connect(c.destination);
+      src.start();
+    } else {
+      const a = new Audio(SND_URL); a.volume = .9;
+      a.play().catch(() => {});
+    }
+  }
+  // Trình duyệt chỉ cho phát âm thanh sau lần chạm đầu tiên
+  const unlock = () => { audio(); removeEventListener('pointerdown', unlock, true); removeEventListener('touchend', unlock, true); };
+  addEventListener('pointerdown', unlock, true);
+  addEventListener('touchend', unlock, true);
+
+  /* ---------- Thanh tiến độ ---------- */
+  const prog = $('progress');
+  function paintProgress(idx, text) {
+    prog.style.setProperty('--p', String(Math.min(1, Math.max(0, idx / (TOTAL - 1)))));
+    prog.setAttribute('aria-valuenow', String(idx + 1));
+    thumb.textContent = text != null ? text : (idx + 1) + '/' + TOTAL;   // số trang nằm ngay trong hình tròn
+  }
+  let scrub = null;   // chỉ số trang đang trỏ tới khi kéo thanh
+  const idxFromX = x => {
+    const r = $('pTrack').getBoundingClientRect();
+    return Math.round(Math.min(1, Math.max(0, (x - r.left) / r.width)) * (TOTAL - 1));
+  };
+  function scrubTo(x) {
+    scrub = idxFromX(x);
+    paintProgress(scrub);
+  }
+  function commitScrub() {
+    const target = scrub; scrub = null;
+    prog.classList.remove('drag');
+    if (target === null || !pf) return;
+    const now = pf.getCurrentPageIndex();
+    if (target === now) { paintProgress(now); return; }
+    if (pf.getOrientation() === 'portrait' && Math.abs(target - now) === 1) {
+      target > now ? pf.flipNext() : pf.flipPrev();     // trang liền kề: có hiệu ứng lật
+    } else {
+      pf.turnToPage(target); playFlip(); update();      // nhảy xa: chuyển thẳng
+    }
+  }
+  prog.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    prog.setPointerCapture(e.pointerId);
+    prog.classList.add('drag'); scrubTo(e.clientX);
+  });
+  prog.addEventListener('pointermove', e => { if (scrub !== null) scrubTo(e.clientX); });
+  prog.addEventListener('pointerup', commitScrub);
+  prog.addEventListener('pointercancel', () => { scrub = null; prog.classList.remove('drag'); if (pf) paintProgress(pf.getCurrentPageIndex()); });
+  prog.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); pf.flipPrev(); }
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); pf.flipNext(); }
+  });
+
+  /* ---------- Cập nhật nhãn / nút ---------- */
+  function update() {
+    const p = pf.getCurrentPageIndex() + 1;
+    cur = p - 1;
+    const portrait = pf.getOrientation() === 'portrait';
+    let label;
+    if (portrait || p === 1 || p === TOTAL) label = p + ' / ' + TOTAL;
+    else { const l = p % 2 === 0 ? p : p - 1; label = l + '–' + (l + 1) + ' / ' + TOTAL; }
+    prog.setAttribute('aria-valuetext', 'Trang ' + label);
+    paintProgress(cur, label.replace(' / ', '/'));  // ví dụ "5/12" hoặc "6–7/12" khi xem hai trang
+    $('btnPrev').disabled = p === 1;
+    $('btnNext').disabled = p >= TOTAL;
+    try { history.replaceState(null, '', '#page/' + p); } catch (e) {}
+  }
+
+  $('btnPrev').onclick = () => pf.flipPrev();
+  $('btnNext').onclick = () => pf.flipNext();
+  addEventListener('keydown', e => {
+    if (document.querySelector('.overlay.open')) { if (e.key === 'Escape') closeAll(); return; }
+    if (e.key === 'ArrowLeft') pf.flipPrev();
+    else if (e.key === 'ArrowRight') pf.flipNext();
+    else if (e.key === 'Home') pf.flip(0);
+    else if (e.key === 'End') pf.flip(TOTAL - 1);
+  });
+
+  /* ---------- Toàn màn hình (iPhone không hỗ trợ -> ẩn nút) ---------- */
+  if (document.fullscreenEnabled) {
+    const f = $('btnFull'); f.hidden = false;
+    f.onclick = () => document.fullscreenElement ? document.exitFullscreen()
+                                                 : document.documentElement.requestFullscreen();
+  }
+
+  /* ---------- Resize / xoay màn hình ---------- */
+  let t;
+  const onResize = () => { clearTimeout(t); t = setTimeout(build, 120); };
+  addEventListener('resize', onResize);
+  addEventListener('orientationchange', onResize);
+  if (window.visualViewport) visualViewport.addEventListener('resize', onResize);
+
+  /* ---------- Overlay ---------- */
+  function closeAll() {
+    document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
+  }
+
+  /* Mục lục */
+  const grid = $('grid');
+  for (let i = 0; i < TOTAL; i++) {
+    const b = document.createElement('button');
+    b.className = 'th'; b.setAttribute('aria-label', 'Trang ' + (i + 1));
+    const im = new Image(); im.src = src(i); im.loading = 'lazy'; im.alt = '';
+    const s = document.createElement('span'); s.textContent = i + 1;
+    b.append(im, s);
+    b.onclick = () => { closeAll(); pf.turnToPage(i); update(); };
+    grid.appendChild(b);
+  }
+  $('btnGrid').onclick = () => {
+    grid.querySelectorAll('.th').forEach((b, i) => b.classList.toggle('cur', i === cur));
+    $('thumbs').classList.add('open');
+    const c = grid.querySelector('.cur'); if (c) c.scrollIntoView({ block: 'center' });
+  };
+  $('tClose').onclick = closeAll;
+
+  /* Chế độ đọc: phóng to, kéo, pinch, double-tap */
+  const reader = $('reader'), rImg = $('readerImg');
+  let rPage = 0, scale = 1;
+  const MIN = 1, MAX = 3;
+
+  function applyScale(s, ax, ay) {
+    s = Math.min(MAX, Math.max(MIN, s));
+    ax = ax == null ? reader.clientWidth / 2 : ax;
+    ay = ay == null ? reader.clientHeight / 2 : ay;
+    // Giữ nguyên điểm đang nhìn khi đổi mức phóng
+    const fx = (reader.scrollLeft + ax) / reader.scrollWidth;
+    const fy = (reader.scrollTop + ay) / reader.scrollHeight;
+    scale = s;
+    rImg.style.width = (reader.clientWidth * scale) + 'px';
+    reader.scrollLeft = fx * reader.scrollWidth - ax;
+    reader.scrollTop = fy * reader.scrollHeight - ay;
+  }
+  function showReader(i, resetZoom) {
+    rPage = Math.min(Math.max(i, 0), TOTAL - 1);
+    rImg.src = src(rPage);
+    $('rTitle').textContent = 'Trang ' + (rPage + 1) + ' / ' + TOTAL;
+    $('rPrev').disabled = rPage === 0; $('rNext').disabled = rPage === TOTAL - 1;
+    if (resetZoom) {
+      scale = 1; rImg.style.width = reader.clientWidth + 'px';
+      reader.scrollTop = 0; reader.scrollLeft = 0;
+    } else reader.scrollTop = 0;
+  }
+  $('btnZoom').onclick = () => {
+    reader.classList.add('open');
+    showReader(cur, true);
+    applyScale(innerHeight > innerWidth ? 2 : 1.4, reader.clientWidth / 2, 0);
+  };
+  $('rClose').onclick = () => { closeAll(); if (rPage !== cur) { pf.turnToPage(rPage); update(); } };
+  $('rPrev').onclick = () => showReader(rPage - 1, false);
+  $('rNext').onclick = () => showReader(rPage + 1, false);
+  $('rIn').onclick = () => applyScale(scale + .5);
+  $('rOut').onclick = () => applyScale(scale - .5);
+
+  // pinch bằng 2 ngón + double-tap
+  let pinch = null, lastTap = 0, moved = false;
+  const dist = t => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+  reader.addEventListener('touchstart', e => {
+    moved = false;
+    if (e.touches.length === 2) pinch = { d: dist(e.touches), s: scale };
+  }, { passive: true });
+  reader.addEventListener('touchmove', e => {
+    moved = true;
+    if (pinch && e.touches.length === 2) {
+      e.preventDefault();
+      const t = e.touches;
+      applyScale(pinch.s * dist(t) / pinch.d, (t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2);
+    }
+  }, { passive: false });
+  reader.addEventListener('touchend', e => {
+    if (pinch) { if (e.touches.length < 2) pinch = null; return; }
+    if (moved || e.changedTouches.length !== 1) return;
+    const now = Date.now();
+    if (now - lastTap < 300) {
+      const tt = e.changedTouches[0];
+      applyScale(scale > 1.2 ? 1 : 2.2, tt.clientX, tt.clientY);
+      lastTap = 0;
+    } else lastTap = now;
+  }, { passive: true });
+  reader.addEventListener('dblclick', e => { // chuột
+    if (e.target === rImg) applyScale(scale > 1.2 ? 1 : 2.2, e.clientX, e.clientY);
+  });
+  addEventListener('resize', () => { if (reader.classList.contains('open')) applyScale(scale); });
+
+  /* ---------- Gợi ý lần đầu ---------- */
+  try {
+    if (!localStorage.getItem('menuHintSeen')) {
+      const h = $('hint');
+      setTimeout(() => h.classList.add('show'), 600);
+      setTimeout(() => h.classList.remove('show'), 4200);
+      localStorage.setItem('menuHintSeen', '1');
+    }
+  } catch (e) {}
+
+  build();
+})();
+</script>
+</body>
+</html>
